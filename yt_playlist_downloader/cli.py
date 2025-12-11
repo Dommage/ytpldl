@@ -107,8 +107,8 @@ def main() -> None:
     menu = """\n=== Téléchargeur de playlist YouTube ===
 1) Lancer le téléchargement
 2) Configuration
-    3) Quitter
-    Choix: """
+3) Quitter
+Choix: """
 
     try:
         while True:
