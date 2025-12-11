@@ -47,6 +47,9 @@ class PlaylistDownloader:
         self, playlist_url: str, cookies_path: Optional[str], last_videos_count: int
     ) -> tuple[int, Optional[int]]:
         if last_videos_count <= 0:
+            self.logger.info(
+                "Téléchargement de toute la playlist en commençant par les vidéos les plus récentes."
+            )
             return 1, None
 
         extract_opts = {
@@ -57,30 +60,33 @@ class PlaylistDownloader:
         if cookies_path:
             extract_opts["cookiefile"] = cookies_path
 
+        total_items: Optional[int] = None
         try:
             with YoutubeDL(extract_opts) as ydl:
                 info = ydl.extract_info(playlist_url, download=False)
             total_items = len(info.get("entries", []) or [])
         except Exception as exc:
             self.logger.warning(
-                "Impossible de déterminer la taille de la playlist (%s). Téléchargement complet.",
+                "Impossible de déterminer la taille de la playlist (%s). Téléchargement des %s dernières vidéos demandées.",
                 exc,
+                last_videos_count,
             )
-            return 1, None
 
-        if total_items == 0:
+        if total_items is not None and total_items <= 0:
             self.logger.warning("La playlist ne contient aucune vidéo détectable.")
             return 1, None
 
-        start_index = max(1, total_items - last_videos_count + 1)
-        end_index = total_items
+        if total_items is None:
+            limited_count = last_videos_count
+        else:
+            limited_count = min(last_videos_count, total_items)
+
         self.logger.info(
-            "Téléchargement des %s dernières vidéos (index %s à %s)",
-            last_videos_count,
-            start_index,
-            end_index,
+            "Téléchargement des %s vidéos les plus récentes (index 1 à %s en ordre inverse)",
+            limited_count,
+            limited_count if limited_count else "?",
         )
-        return start_index, end_index
+        return 1, limited_count if limited_count > 0 else None
 
     def download_playlist(
         self,
@@ -109,6 +115,7 @@ class PlaylistDownloader:
             "yesplaylist": True,
             "playliststart": playlist_start,
             "playlistend": playlist_end,
+            "playlistreverse": True,
             "retries": 10,
             "fragment_retries": 20,
             "socket_timeout": 30,
