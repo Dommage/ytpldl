@@ -57,20 +57,17 @@ def start_download_menu(config: dict, logger) -> None:
         print("L'URL ne peut pas être vide.")
         playlist_url = _prompt("URL de la playlist YouTube")
 
-    use_cookies = _prompt(
-        "Utiliser un fichier cookies.txt? (o/N)", "N"
-    ).lower().startswith("o")
-    cookies_path: Optional[str] = None
-    if use_cookies:
-        cookies_path = _prompt(
-            "Chemin vers cookies.txt (YouTube)", config.get("cookies_path") or ""
-        )
-        if cookies_path:
-            if not os.path.exists(cookies_path):
-                print("Attention: le fichier cookies.txt n'existe pas. Le téléchargement peut échouer.")
-            else:
-                config["cookies_path"] = cookies_path
-                save_config(config)
+    cookies_prompt_default = config.get("cookies_path") or ""
+    cookies_path_input = _prompt(
+        "Chemin vers cookies.txt (YouTube, laisser vide pour ignorer)", cookies_prompt_default
+    )
+    cookies_path: Optional[str] = cookies_path_input or None
+    if cookies_path:
+        if not os.path.exists(cookies_path):
+            print("Attention: le fichier cookies.txt n'existe pas. Le téléchargement peut échouer.")
+        else:
+            config["cookies_path"] = cookies_path
+            save_config(config)
 
     last_videos = _prompt_int(
         "Nombre des dernières vidéos à télécharger (0 = toute la playlist)",
@@ -100,20 +97,24 @@ def main() -> None:
     menu = """\n=== Téléchargeur de playlist YouTube ===
 1) Lancer le téléchargement
 2) Configuration
-3) Quitter
-Choix: """
+    3) Quitter
+    Choix: """
 
-    while True:
-        choice = input(menu).strip()
-        if choice == "1":
-            start_download_menu(config, logger)
-        elif choice == "2":
-            config = configure_menu(config, logger)
-        elif choice == "3":
-            print("Au revoir !")
-            break
-        else:
-            print("Choix invalide, merci de réessayer.\n")
+    try:
+        while True:
+            choice = input(menu).strip()
+            if choice == "1":
+                start_download_menu(config, logger)
+            elif choice == "2":
+                config = configure_menu(config, logger)
+            elif choice == "3":
+                print("Au revoir !")
+                break
+            else:
+                print("Choix invalide, merci de réessayer.\n")
+    except KeyboardInterrupt:
+        print("\nFermeture demandée. À bientôt !")
+        logger.info("Fermeture forcée par l'utilisateur via Ctrl+C")
 
 
 if __name__ == "__main__":

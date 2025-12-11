@@ -8,7 +8,7 @@ CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "download_dir": "downloads",
-    "cookies_path": "",
+    "cookies_path": "config/cookies.txt",
     "max_quality_height": 1080,
     "archive_path": "logs/download_archive.txt",
 }

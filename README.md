@@ -32,6 +32,8 @@ source .venv/bin/activate
 # 3) Installer les dépendances
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# (Optionnel mais recommandé) Installer un runtime JavaScript (ex. Node.js) pour résoudre les challenges YouTube (EJS) si yt-dlp l'exige.
 ```
 
 ## Lancement de l'application
@@ -51,7 +53,7 @@ python main.py
 ### Option 1 : Lancer le téléchargement
 L'application vous demande :
 1. **URL de la playlist**
-2. **Utilisation d'un fichier cookies.txt** (chemin optionnel)
+2. **Utilisation d'un fichier cookies.txt** (par défaut `config/cookies.txt` si présent)
 3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist). Les vidéos sont téléchargées en commençant par les plus récentes.
 4. **Qualité maximale** (hauteur en pixels, `0` = meilleure disponible)
 5. **Dossier de téléchargement** (créé automatiquement si absent)
@@ -71,6 +73,7 @@ Les valeurs sont sauvegardées dans `config/config.json`.
 - Les fragments déjà téléchargés ne sont pas perdus.
 - Les erreurs sont journalisées avec date/heure dans `logs/app.log`.
 - Les vidéos déjà téléchargées sont suivies dans `logs/download_archive.txt` pour éviter les doublons.
+- Les erreurs de challenge YouTube (EJS) sont signalées clairement ; installez un runtime JavaScript (ex. Node.js) et le solveur EJS pour les résoudre.
 
 ## Exemple d'exécution
 ```
@@ -82,16 +85,17 @@ Choix: 1
 
 --- Lancer le téléchargement ---
 URL de la playlist YouTube: https://www.youtube.com/playlist?list=XXXXXXXXX
-Utiliser un fichier cookies.txt? (o/N) [N]: o
-Chemin vers cookies.txt (YouTube): /home/user/cookies.txt
+Chemin vers cookies.txt (YouTube, laisser vide pour ignorer) [config/cookies.txt]: /home/user/cookies.txt
 Nombre des dernières vidéos à télécharger (0 = toute la playlist) [0]: 5
 Qualité maximale désirée (hauteur en pixels, 0 pour la meilleure disponible) [1080]: 720
 Dossier de téléchargement [downloads]: /srv/videos
 [DOWNLOADING] Titre de la vidéo ... | 12.3% at 1.5MiB/s | ETA 1m23s
 ...
-Completed: 001-Video-title.mp4
+Completed: Video-title.mp4
 All downloads attempted. Review logs for details.
 ```
+
+Interruption forcée : `Ctrl+C` arrête proprement l'application, ferme le menu et journalise l'événement.
 
 ## Mise à jour automatique de yt-dlp
 Ajoutez une tâche cron pour mettre à jour `yt-dlp` chaque nuit :
@@ -103,6 +107,6 @@ crontab -e
 ```
 
 ## Notes
-- Assurez-vous que `cookies.txt` est exporté depuis un navigateur connecté à votre compte YouTube si la playlist est privée.
+- Assurez-vous que `cookies.txt` est exporté depuis un navigateur connecté à votre compte YouTube si la playlist est privée. Un chemin par défaut `config/cookies.txt` est proposé.
 - Le dossier de téléchargement est créé automatiquement si nécessaire.
 - La commande doit être lancée dans un terminal SSH (pas d'interface graphique requise).

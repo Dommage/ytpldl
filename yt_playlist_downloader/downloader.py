@@ -3,6 +3,7 @@ import sys
 from typing import Optional
 
 from yt_dlp import YoutubeDL
+from yt_dlp.utils import DownloadError
 
 from .logger import get_logger
 
@@ -116,7 +117,7 @@ class PlaylistDownloader:
             format_selector = "bestvideo+bestaudio/best"
 
         ydl_opts = {
-            "outtmpl": os.path.join(download_dir, "%(playlist_index)03d-%(title)s.%(ext)s"),
+            "outtmpl": os.path.join(download_dir, "%(title)s.%(ext)s"),
             "ignoreerrors": True,
             "noplaylist": False,
             "yesplaylist": True,
@@ -153,6 +154,22 @@ class PlaylistDownloader:
             with YoutubeDL(ydl_opts) as ydl:
                 ydl.download([playlist_url])
             print("\nAll downloads attempted. Review logs for details.")
+        except DownloadError as exc:
+            error_message = str(exc)
+            if "n challenge solving failed" in error_message:
+                self.logger.error(
+                    "yt-dlp a rencontré un échec de résolution de challenge (EJS). "
+                    "Installez un runtime JavaScript pris en charge (ex: Node.js) et "
+                    "assurez-vous que les scripts EJS de yt-dlp sont disponibles. Détails: %s",
+                    error_message,
+                )
+                print(
+                    "Erreur de challenge YouTube. Installez un runtime JavaScript (ex: Node.js) "
+                    "et le challenge solver EJS. Consultez les logs pour plus de détails."
+                )
+            else:
+                self.logger.error("Erreur yt-dlp: %s", error_message)
+                print("yt-dlp a rencontré une erreur. Consultez les logs pour plus de détails.")
         except Exception as exc:  # yt-dlp already handles most errors
             self.logger.exception("Unexpected error while downloading playlist: %s", exc)
             print("A critical error occurred. See logs/app.log for details.")
