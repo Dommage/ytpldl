@@ -51,7 +51,7 @@ python main.py
 L'application vous demande :
 1. **URL de la playlist**
 2. **Utilisation d'un fichier cookies.txt** (chemin optionnel)
-3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist). Les vidéos sont téléchargées en commençant par les plus récentes.
+3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist)
 4. **Qualité maximale** (hauteur en pixels, `0` = meilleure disponible)
 5. **Dossier de téléchargement** (créé automatiquement si absent)
 
