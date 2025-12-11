@@ -53,7 +53,7 @@ python main.py
 ### Option 1 : Lancer le téléchargement
 L'application vous demande :
 1. **URL de la playlist**
-2. **Utilisation d'un fichier cookies.txt** (par défaut `config/cookies.txt` si présent)
+2. **Utilisation d'un fichier cookies.txt** (par défaut `./cookies.txt` si présent, tapez `aucun` pour ne pas l'utiliser)
 3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist). Les vidéos sont téléchargées en commençant par les plus récentes.
 4. **Qualité maximale** (hauteur en pixels, `0` = meilleure disponible)
 5. **Dossier de téléchargement** (créé automatiquement si absent)
@@ -63,7 +63,7 @@ Les vidéos déjà référencées dans `logs/download_archive.txt` sont automati
 
 ### Option 2 : Configuration
 - Définit le dossier de téléchargement par défaut
-- Définit le chemin du `cookies.txt` (YouTube)
+- Définit le chemin du `cookies.txt` (YouTube) — tapez `aucun` pour désactiver l'usage des cookies
 - Définit la **qualité maximale** désirée (hauteur en pixels)
 
 Les valeurs sont sauvegardées dans `config/config.json`.
@@ -85,7 +85,7 @@ Choix: 1
 
 --- Lancer le téléchargement ---
 URL de la playlist YouTube: https://www.youtube.com/playlist?list=XXXXXXXXX
-Chemin vers cookies.txt (YouTube, laisser vide pour ignorer) [config/cookies.txt]: /home/user/cookies.txt
+Chemin vers cookies.txt (YouTube, taper 'aucun' pour ne pas utiliser) [./cookies.txt]: /home/user/cookies.txt
 Nombre des dernières vidéos à télécharger (0 = toute la playlist) [0]: 5
 Qualité maximale désirée (hauteur en pixels, 0 pour la meilleure disponible) [1080]: 720
 Dossier de téléchargement [downloads]: /srv/videos
@@ -107,6 +107,6 @@ crontab -e
 ```
 
 ## Notes
-- Assurez-vous que `cookies.txt` est exporté depuis un navigateur connecté à votre compte YouTube si la playlist est privée. Un chemin par défaut `config/cookies.txt` est proposé.
+- Assurez-vous que `cookies.txt` est exporté depuis un navigateur connecté à votre compte YouTube si la playlist est privée. Un chemin par défaut `./cookies.txt` est proposé, et vous pouvez taper `aucun` pour ne pas utiliser de cookies.
 - Le dossier de téléchargement est créé automatiquement si nécessaire.
 - La commande doit être lancée dans un terminal SSH (pas d'interface graphique requise).

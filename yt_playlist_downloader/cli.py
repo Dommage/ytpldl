@@ -25,13 +25,24 @@ def _prompt_int(text: str, default: int, min_value: int = 0) -> int:
             print("Invalid number. Please try again.")
 
 
+def _prompt_cookies_path(current_default: Optional[str]) -> Optional[str]:
+    default_display = current_default or DEFAULT_CONFIG["cookies_path"]
+    raw = input(
+        f"Chemin vers cookies.txt (YouTube, taper 'aucun' pour ne pas utiliser) [{default_display}]: "
+    ).strip()
+
+    lowered = raw.lower()
+    if lowered in {"aucun", "none", "no", "non"}:
+        return None
+    if raw == "":
+        return default_display
+    return raw
+
+
 def configure_menu(config: dict, logger) -> dict:
     print("\n--- Configuration ---")
     download_dir = _prompt("Default dossier de téléchargement", config["download_dir"])
-    cookies_path = _prompt(
-        "Chemin du fichier cookies.txt (laisser vide si non utilisé)",
-        config.get("cookies_path") or "",
-    )
+    cookies_path = _prompt_cookies_path(config.get("cookies_path"))
 
     max_quality_height = _prompt_int(
         "Qualité maximale désirée (hauteur en pixels, 0 pour la meilleure disponible)",
@@ -57,17 +68,16 @@ def start_download_menu(config: dict, logger) -> None:
         print("L'URL ne peut pas être vide.")
         playlist_url = _prompt("URL de la playlist YouTube")
 
-    cookies_prompt_default = config.get("cookies_path") or ""
-    cookies_path_input = _prompt(
-        "Chemin vers cookies.txt (YouTube, laisser vide pour ignorer)", cookies_prompt_default
-    )
-    cookies_path: Optional[str] = cookies_path_input or None
+    cookies_path: Optional[str] = _prompt_cookies_path(config.get("cookies_path"))
     if cookies_path:
         if not os.path.exists(cookies_path):
             print("Attention: le fichier cookies.txt n'existe pas. Le téléchargement peut échouer.")
         else:
             config["cookies_path"] = cookies_path
             save_config(config)
+    else:
+        config["cookies_path"] = None
+        save_config(config)
 
     last_videos = _prompt_int(
         "Nombre des dernières vidéos à télécharger (0 = toute la playlist)",
