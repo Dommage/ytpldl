@@ -10,6 +10,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "download_dir": "downloads",
     "cookies_path": "",
     "max_quality_height": 1080,
+    "archive_path": "logs/download_archive.txt",
 }
 
 

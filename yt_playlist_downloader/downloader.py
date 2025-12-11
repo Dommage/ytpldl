@@ -95,11 +95,17 @@ class PlaylistDownloader:
         cookies_path: Optional[str] = None,
         last_videos_count: int = 0,
         max_quality_height: Optional[int] = None,
+        archive_path: Optional[str] = None,
     ) -> None:
         os.makedirs(download_dir, exist_ok=True)
         playlist_start, playlist_end = self._determine_range(
             playlist_url, cookies_path, last_videos_count
         )
+
+        resolved_archive = archive_path or os.path.join("logs", "download_archive.txt")
+        archive_dir = os.path.dirname(resolved_archive)
+        if archive_dir:
+            os.makedirs(archive_dir, exist_ok=True)
 
         if max_quality_height and max_quality_height > 0:
             format_selector = (
@@ -108,6 +114,7 @@ class PlaylistDownloader:
             )
         else:
             format_selector = "bestvideo+bestaudio/best"
+
         ydl_opts = {
             "outtmpl": os.path.join(download_dir, "%(playlist_index)03d-%(title)s.%(ext)s"),
             "ignoreerrors": True,
@@ -125,6 +132,8 @@ class PlaylistDownloader:
             "progress_hooks": [self._progress_hook],
             "trim_file_name": 200,
             "format": format_selector,
+            "download_archive": resolved_archive,
+            "nooverwrites": True,
         }
 
         if cookies_path:
@@ -134,6 +143,11 @@ class PlaylistDownloader:
         self.logger.info("Saving to: %s", os.path.abspath(download_dir))
         if cookies_path:
             self.logger.info("Using cookies file: %s", cookies_path)
+        if resolved_archive:
+            self.logger.info(
+                "Les vidéos déjà présentes dans l'archive seront ignorées: %s",
+                os.path.abspath(resolved_archive),
+            )
 
         try:
             with YoutubeDL(ydl_opts) as ydl:

@@ -89,6 +89,7 @@ def start_download_menu(config: dict, logger) -> None:
         cookies_path=cookies_path,
         last_videos_count=last_videos,
         max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
+        archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
     )
 
 

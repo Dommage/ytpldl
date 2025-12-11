@@ -9,6 +9,7 @@ Application CLI pour Ubuntu (via SSH) permettant de télécharger l'ensemble d'u
 │   └── config.json (généré automatiquement)
 ├── logs/
 │   └── app.log
+│   └── download_archive.txt (créé automatiquement pour éviter les doublons)
 ├── yt_playlist_downloader/
 │   ├── __init__.py
 │   ├── cli.py
@@ -51,11 +52,12 @@ python main.py
 L'application vous demande :
 1. **URL de la playlist**
 2. **Utilisation d'un fichier cookies.txt** (chemin optionnel)
-3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist)
+3. **Nombre des dernières vidéos à télécharger** (`0` = télécharger toute la playlist). Les vidéos sont téléchargées en commençant par les plus récentes.
 4. **Qualité maximale** (hauteur en pixels, `0` = meilleure disponible)
 5. **Dossier de téléchargement** (créé automatiquement si absent)
 
 La progression, l'estimation du temps restant et les erreurs sont affichées dans le terminal. Les logs détaillés sont dans `logs/app.log`.
+Les vidéos déjà référencées dans `logs/download_archive.txt` sont automatiquement ignorées afin de ne pas retélécharger ce qui existe déjà. Supprimez ce fichier si vous souhaitez forcer un nouveau téléchargement complet.
 
 ### Option 2 : Configuration
 - Définit le dossier de téléchargement par défaut
@@ -68,6 +70,7 @@ Les valeurs sont sauvegardées dans `config/config.json`.
 - `yt-dlp` est configuré avec des reprises automatiques (`continuedl`), plusieurs tentatives (`retries`, `fragment_retries`) et un délai d'attente (`socket_timeout`).
 - Les fragments déjà téléchargés ne sont pas perdus.
 - Les erreurs sont journalisées avec date/heure dans `logs/app.log`.
+- Les vidéos déjà téléchargées sont suivies dans `logs/download_archive.txt` pour éviter les doublons.
 
 ## Exemple d'exécution
 ```
