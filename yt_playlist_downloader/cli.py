@@ -57,19 +57,51 @@ def _process_alive(pid: int) -> bool:
         return True
 
 
+def _is_download_process(pid: int) -> bool:
+    """Vérifie qu'un PID correspond bien à un téléchargement en cours."""
+
+    if not _process_alive(pid):
+        return False
+
+    cmdline_path = f"/proc/{pid}/cmdline"
+    try:
+        with open(cmdline_path, "rb") as cmd_file:
+            content = cmd_file.read().decode(errors="ignore")
+    except OSError:
+        return False
+
+    parts = content.split("\0")
+    return any("yt_playlist_downloader.worker" in part for part in parts)
+
+
+def _active_download_pids() -> list[int]:
+    """Retourne la liste des téléchargements en arrière-plan toujours actifs."""
+
+    active_pids: list[int] = []
+    saved_pid = _load_background_pid()
+    if saved_pid and _is_download_process(saved_pid):
+        active_pids.append(saved_pid)
+    elif saved_pid:
+        _clear_background_pid(expected_pid=saved_pid)
+    return active_pids
+
+
 def _prompt(text: str, default: Optional[str] = None) -> str:
     suffix = f" [{default}]" if default else ""
     value = input(f"{text}{suffix}: ").strip()
     return value or (default or "")
 
 
-def _prompt_int(text: str, default: int, min_value: int = 0) -> int:
+def _prompt_int(text: str, default: int, min_value: int = 0, max_value: Optional[int] = None) -> int:
     while True:
         raw = _prompt(text, str(default))
         try:
             value = int(raw)
             if value < min_value:
                 print(f"Merci d'entrer un entier supérieur ou égal à {min_value}.")
+                continue
+            if max_value is not None and value > max_value:
+                print(f"Merci d'entrer un entier inférieur ou égal à {max_value}.")
                 continue
             return value
         except ValueError:
@@ -260,23 +292,28 @@ def _stream_background_log(log_path: str, process: subprocess.Popen) -> None:
 
 def cancel_background_download(logger) -> None:
     print("\n--- Annuler un téléchargement en arrière-plan ---")
-    saved_pid = _load_background_pid()
-    default_display = str(saved_pid) if saved_pid else None
-    raw_pid = _prompt("PID du téléchargement à annuler", default_display)
-    if not raw_pid:
-        print("Aucune action effectuée.\n")
+    active_pids = _active_download_pids()
+    if not active_pids:
+        print("Aucun téléchargement en arrière-plan actif.")
         return
 
-    try:
-        pid = int(raw_pid)
-    except ValueError:
-        print("PID invalide. Merci de réessayer.\n")
-        return
+    print("Téléchargements en cours :")
+    for idx, pid in enumerate(active_pids, start=1):
+        print(f" {idx}) PID {pid}")
 
-    if not _process_alive(pid):
-        print(f"Aucun téléchargement en arrière-plan actif avec le PID {pid}.")
-        _clear_background_pid(expected_pid=pid)
-        return
+    if len(active_pids) == 1:
+        pid = active_pids[0]
+        if not _prompt_yes_no(f"Annuler le téléchargement avec le PID {pid}?", default=True):
+            print("Aucune action effectuée.\n")
+            return
+    else:
+        choice = _prompt_int(
+            "Sélectionnez le téléchargement à annuler",
+            default=1,
+            min_value=1,
+            max_value=len(active_pids),
+        )
+        pid = active_pids[choice - 1]
 
     try:
         os.killpg(pid, signal.SIGTERM)
@@ -289,32 +326,6 @@ def cancel_background_download(logger) -> None:
         print(f"Téléchargement en arrière-plan (PID {pid}) annulé.")
     finally:
         _clear_background_pid(expected_pid=pid)
-
-    print("\nSuivi en direct des progrès (Ctrl+C pour arrêter le suivi, le téléchargement continuera):")
-    _stream_background_log(background_log, proc)
-
-
-def _stream_background_log(log_path: str, process: subprocess.Popen) -> None:
-    """Stream the background process log to stdout until it exits or user stops."""
-
-    try:
-        with open(log_path, "r", encoding="utf-8", errors="replace") as log_file:
-            log_file.seek(0, os.SEEK_END)
-            while True:
-                line = log_file.readline()
-                if line:
-                    print(line, end="")
-                else:
-                    if process.poll() is not None:
-                        # Process finished; print any remaining buffered lines then exit
-                        remaining = log_file.read()
-                        if remaining:
-                            print(remaining, end="")
-                        print("\nTéléchargement d'arrière-plan terminé.")
-                        break
-                    time.sleep(0.5)
-    except KeyboardInterrupt:
-        print("\nSuivi interrompu par l'utilisateur. Le téléchargement se poursuit en arrière-plan.")
 
 
 def main() -> None:
