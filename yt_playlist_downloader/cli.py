@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 from typing import Optional
 
 from .config import DEFAULT_CONFIG, load_config, save_config
@@ -177,6 +178,32 @@ def _launch_background_download(
         f"Téléchargement lancé en arrière-plan (PID {proc.pid}). "
         f"Consultez {background_log} pour le détail."
     )
+
+    print("\nSuivi en direct des progrès (Ctrl+C pour arrêter le suivi, le téléchargement continuera):")
+    _stream_background_log(background_log, proc)
+
+
+def _stream_background_log(log_path: str, process: subprocess.Popen) -> None:
+    """Stream the background process log to stdout until it exits or user stops."""
+
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as log_file:
+            log_file.seek(0, os.SEEK_END)
+            while True:
+                line = log_file.readline()
+                if line:
+                    print(line, end="")
+                else:
+                    if process.poll() is not None:
+                        # Process finished; print any remaining buffered lines then exit
+                        remaining = log_file.read()
+                        if remaining:
+                            print(remaining, end="")
+                        print("\nTéléchargement d'arrière-plan terminé.")
+                        break
+                    time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nSuivi interrompu par l'utilisateur. Le téléchargement se poursuit en arrière-plan.")
 
 
 def main() -> None:
