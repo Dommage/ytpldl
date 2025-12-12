@@ -42,6 +42,24 @@ source .venv/bin/activate
 python main.py
 ```
 
+### Exécution en arrière-plan (survit à la fermeture SSH)
+- Choisissez l'option **1) Lancer le téléchargement** puis répondez **o** à la question demandant si vous souhaitez l'exécuter en arrière-plan.
+- Le téléchargement est détaché du terminal, continue même si la session SSH est fermée et écrit sa sortie dans `logs/background.log` (en plus de `logs/app.log`).
+- Vous pouvez suivre la progression avec :
+```bash
+tail -f logs/background.log
+```
+- Pour lancer un téléchargement directement en tâche de fond sans passer par le menu interactif :
+```bash
+source .venv/bin/activate
+python -m yt_playlist_downloader.worker \
+  --playlist-url "https://www.youtube.com/playlist?list=XXXX" \
+  --download-dir "/srv/videos" \
+  --last-videos 5 \
+  --max-quality-height 1080 \
+  --cookies-path ./cookies.txt
+```
+
 ## Menu CLI
 ```
 === Téléchargeur de playlist YouTube ===

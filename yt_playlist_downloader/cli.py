@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 from typing import Optional
 
 from .config import DEFAULT_CONFIG, load_config, save_config
@@ -23,6 +25,19 @@ def _prompt_int(text: str, default: int, min_value: int = 0) -> int:
             return value
         except ValueError:
             print("Invalid number. Please try again.")
+
+
+def _prompt_yes_no(text: str, default: bool = True) -> bool:
+    default_display = "o" if default else "n"
+    while True:
+        answer = input(f"{text} [o/n] ({default_display}): ").strip().lower()
+        if not answer:
+            return default
+        if answer in {"o", "oui", "y", "yes"}:
+            return True
+        if answer in {"n", "non", "no"}:
+            return False
+        print("Veuillez répondre par o ou n.")
 
 
 def _prompt_cookies_path(current_default: Optional[str]) -> Optional[str]:
@@ -89,14 +104,78 @@ def start_download_menu(config: dict, logger) -> None:
     if not download_dir:
         download_dir = DEFAULT_CONFIG["download_dir"]
 
-    downloader = PlaylistDownloader(logger=logger)
-    downloader.download_playlist(
-        playlist_url=playlist_url,
-        download_dir=download_dir,
-        cookies_path=cookies_path,
-        last_videos_count=last_videos,
-        max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
-        archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
+    if _prompt_yes_no(
+        "Exécuter le téléchargement en arrière-plan pour survivre à la fermeture de la session SSH?",
+        default=True,
+    ):
+        _launch_background_download(
+            playlist_url=playlist_url,
+            download_dir=download_dir,
+            cookies_path=cookies_path,
+            last_videos_count=last_videos,
+            max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
+            archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
+            logger=logger,
+        )
+    else:
+        downloader = PlaylistDownloader(logger=logger)
+        downloader.download_playlist(
+            playlist_url=playlist_url,
+            download_dir=download_dir,
+            cookies_path=cookies_path,
+            last_videos_count=last_videos,
+            max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
+            archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
+        )
+
+
+def _launch_background_download(
+    playlist_url: str,
+    download_dir: str,
+    cookies_path: Optional[str],
+    last_videos_count: int,
+    max_quality_height: Optional[int],
+    archive_path: Optional[str],
+    logger,
+) -> None:
+    os.makedirs("logs", exist_ok=True)
+    background_log = os.path.join("logs", "background.log")
+    cmd = [
+        sys.executable,
+        "-m",
+        "yt_playlist_downloader.worker",
+        "--playlist-url",
+        playlist_url,
+        "--download-dir",
+        download_dir,
+        "--last-videos",
+        str(last_videos_count),
+        "--max-quality-height",
+        str(max_quality_height if max_quality_height is not None else 0),
+        "--archive-path",
+        archive_path or DEFAULT_CONFIG["archive_path"],
+    ]
+    if cookies_path:
+        cmd.extend(["--cookies-path", cookies_path])
+
+    with open(background_log, "a", encoding="utf-8") as log_file:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=log_file,
+            stderr=log_file,
+            start_new_session=True,
+            close_fds=True,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        )
+
+    logger.info(
+        "Téléchargement lancé en arrière-plan (PID %s). Suivez les sorties dans %s.",
+        proc.pid,
+        os.path.abspath(background_log),
+    )
+    print(
+        f"Téléchargement lancé en arrière-plan (PID {proc.pid}). "
+        f"Consultez {background_log} pour le détail."
     )
 
 
