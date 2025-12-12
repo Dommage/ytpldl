@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -7,6 +8,53 @@ from typing import Optional
 from .config import DEFAULT_CONFIG, load_config, save_config
 from .downloader import PlaylistDownloader
 from .logger import get_logger
+
+
+BACKGROUND_PID_FILE = os.path.join("logs", "background.pid")
+
+
+def _save_background_pid(pid: int) -> None:
+    os.makedirs("logs", exist_ok=True)
+    with open(BACKGROUND_PID_FILE, "w", encoding="utf-8") as f:
+        f.write(str(pid))
+
+
+def _load_background_pid() -> Optional[int]:
+    if not os.path.exists(BACKGROUND_PID_FILE):
+        return None
+    try:
+        with open(BACKGROUND_PID_FILE, "r", encoding="utf-8") as f:
+            return int(f.read().strip())
+    except (ValueError, OSError):
+        return None
+
+
+def _clear_background_pid(expected_pid: Optional[int] = None) -> None:
+    if not os.path.exists(BACKGROUND_PID_FILE):
+        return
+    if expected_pid is not None:
+        try:
+            with open(BACKGROUND_PID_FILE, "r", encoding="utf-8") as f:
+                current_pid = int(f.read().strip())
+            if current_pid != expected_pid:
+                return
+        except (ValueError, OSError):
+            pass
+    try:
+        os.remove(BACKGROUND_PID_FILE)
+    except OSError:
+        pass
+
+
+def _process_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    else:
+        return True
 
 
 def _prompt(text: str, default: Optional[str] = None) -> str:
@@ -169,6 +217,8 @@ def _launch_background_download(
             env={**os.environ, "PYTHONUNBUFFERED": "1"},
         )
 
+    _save_background_pid(proc.pid)
+
     logger.info(
         "Téléchargement lancé en arrière-plan (PID %s). Suivez les sorties dans %s.",
         proc.pid,
@@ -178,6 +228,67 @@ def _launch_background_download(
         f"Téléchargement lancé en arrière-plan (PID {proc.pid}). "
         f"Consultez {background_log} pour le détail."
     )
+    print(f"PID enregistré dans {BACKGROUND_PID_FILE} pour une éventuelle annulation.")
+
+    print("\nSuivi en direct des progrès (Ctrl+C pour arrêter le suivi, le téléchargement continuera):")
+    _stream_background_log(background_log, proc)
+
+
+def _stream_background_log(log_path: str, process: subprocess.Popen) -> None:
+    """Stream the background process log to stdout until it exits or user stops."""
+
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as log_file:
+            log_file.seek(0, os.SEEK_END)
+            while True:
+                line = log_file.readline()
+                if line:
+                    print(line, end="")
+                else:
+                    if process.poll() is not None:
+                        # Process finished; print any remaining buffered lines then exit
+                        remaining = log_file.read()
+                        if remaining:
+                            print(remaining, end="")
+                        print("\nTéléchargement d'arrière-plan terminé.")
+                        _clear_background_pid(expected_pid=process.pid)
+                        break
+                    time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nSuivi interrompu par l'utilisateur. Le téléchargement se poursuit en arrière-plan.")
+
+
+def cancel_background_download(logger) -> None:
+    print("\n--- Annuler un téléchargement en arrière-plan ---")
+    saved_pid = _load_background_pid()
+    default_display = str(saved_pid) if saved_pid else None
+    raw_pid = _prompt("PID du téléchargement à annuler", default_display)
+    if not raw_pid:
+        print("Aucune action effectuée.\n")
+        return
+
+    try:
+        pid = int(raw_pid)
+    except ValueError:
+        print("PID invalide. Merci de réessayer.\n")
+        return
+
+    if not _process_alive(pid):
+        print(f"Aucun téléchargement en arrière-plan actif avec le PID {pid}.")
+        _clear_background_pid(expected_pid=pid)
+        return
+
+    try:
+        os.killpg(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        print(f"Aucun téléchargement en arrière-plan actif avec le PID {pid}.")
+    except PermissionError:
+        print("Permission refusée pour annuler ce téléchargement.")
+    else:
+        logger.info("Téléchargement en arrière-plan (PID %s) annulé par l'utilisateur.", pid)
+        print(f"Téléchargement en arrière-plan (PID {pid}) annulé.")
+    finally:
+        _clear_background_pid(expected_pid=pid)
 
     print("\nSuivi en direct des progrès (Ctrl+C pour arrêter le suivi, le téléchargement continuera):")
     _stream_background_log(background_log, proc)
@@ -213,7 +324,8 @@ def main() -> None:
     menu = """\n=== Téléchargeur de playlist YouTube ===
 1) Lancer le téléchargement
 2) Configuration
-3) Quitter
+3) Annuler un téléchargement en arrière-plan
+4) Quitter
 Choix: """
 
     try:
@@ -224,6 +336,8 @@ Choix: """
             elif choice == "2":
                 config = configure_menu(config, logger)
             elif choice == "3":
+                cancel_background_download(logger)
+            elif choice == "4":
                 print("Au revoir !")
                 break
             else:
