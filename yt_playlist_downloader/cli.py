@@ -233,23 +233,128 @@ def start_download_menu(config: dict, logger) -> None:
         )
 
 
+def start_download_from_playlist_txt_menu(config: dict, logger) -> None:
+    print("\n--- Télécharger depuis playlist.txt ---")
+    _warn_missing_js_runtimes()
+
+    download_dir = _prompt("Dossier de téléchargement", config.get("download_dir", "downloads"))
+    if not download_dir:
+        download_dir = DEFAULT_CONFIG["download_dir"]
+
+    default_txt_path = os.path.join(download_dir, "playlist.txt")
+    playlist_txt_path = _prompt("Chemin vers playlist.txt", default_txt_path)
+    if not playlist_txt_path:
+        playlist_txt_path = default_txt_path
+
+    if not os.path.exists(playlist_txt_path):
+        print("Le fichier playlist.txt n'existe pas.")
+        return
+
+    cookies_path: Optional[str] = _prompt_cookies_path(config.get("cookies_path"))
+    if cookies_path:
+        if not os.path.exists(cookies_path):
+            print("Attention: le fichier cookies.txt n'existe pas. Le téléchargement peut échouer.")
+        else:
+            config["cookies_path"] = cookies_path
+            save_config(config)
+    else:
+        config["cookies_path"] = None
+        save_config(config)
+
+    last_videos = _prompt_int(
+        "Nombre des dernières URLs à télécharger (0 = tout le fichier)",
+        0,
+        min_value=0,
+    )
+
+    if _prompt_yes_no(
+        "Exécuter le téléchargement en arrière-plan pour survivre à la fermeture de la session SSH?",
+        default=True,
+    ):
+        _launch_background_download(
+            download_dir=download_dir,
+            cookies_path=cookies_path,
+            last_videos_count=last_videos,
+            max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
+            archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
+            logger=logger,
+            playlist_txt_input=playlist_txt_path,
+        )
+    else:
+        downloader = PlaylistDownloader(logger=logger)
+        downloader.download_playlist_txt(
+            playlist_txt_path=playlist_txt_path,
+            download_dir=download_dir,
+            cookies_path=cookies_path,
+            last_videos_count=last_videos,
+            max_quality_height=config.get("max_quality_height", DEFAULT_CONFIG["max_quality_height"]),
+            archive_path=config.get("archive_path", DEFAULT_CONFIG["archive_path"]),
+        )
+
+
+def export_playlist_menu(config: dict, logger) -> None:
+    print("\n--- Export playlist.txt (1 URL par ligne) ---")
+    _warn_missing_js_runtimes()
+    playlist_url = _prompt("URL de la playlist YouTube")
+    while not playlist_url:
+        print("L'URL ne peut pas être vide.")
+        playlist_url = _prompt("URL de la playlist YouTube")
+
+    cookies_path: Optional[str] = _prompt_cookies_path(config.get("cookies_path"))
+    if cookies_path:
+        if not os.path.exists(cookies_path):
+            print("Attention: le fichier cookies.txt n'existe pas. L'export peut échouer.")
+        else:
+            config["cookies_path"] = cookies_path
+            save_config(config)
+    else:
+        config["cookies_path"] = None
+        save_config(config)
+
+    last_videos = _prompt_int(
+        "Nombre des dernières vidéos à exporter (0 = toute la playlist)",
+        0,
+        min_value=0,
+    )
+
+    download_dir = _prompt("Dossier de sortie", config.get("download_dir", "downloads"))
+    if not download_dir:
+        download_dir = DEFAULT_CONFIG["download_dir"]
+
+    default_output_path = os.path.join(download_dir, "playlist.txt")
+    output_path = _prompt("Chemin du fichier playlist.txt", default_output_path)
+    if not output_path:
+        output_path = default_output_path
+
+    downloader = PlaylistDownloader(logger=logger)
+    count = downloader.export_playlist_txt(
+        playlist_url=playlist_url,
+        output_path=output_path,
+        cookies_path=cookies_path,
+        last_videos_count=last_videos,
+    )
+    print(f"playlist.txt écrit: {output_path} ({count} URLs)")
+
+
 def _launch_background_download(
-    playlist_url: str,
     download_dir: str,
     cookies_path: Optional[str],
     last_videos_count: int,
     max_quality_height: Optional[int],
     archive_path: Optional[str],
     logger,
+    playlist_url: Optional[str] = None,
+    playlist_txt_input: Optional[str] = None,
 ) -> None:
+    if bool(playlist_url) == bool(playlist_txt_input):
+        raise ValueError("Provide exactly one of playlist_url or playlist_txt_input")
+
     os.makedirs("logs", exist_ok=True)
     background_log = os.path.join("logs", "background.log")
     cmd = [
         sys.executable,
         "-m",
         "yt_playlist_downloader.worker",
-        "--playlist-url",
-        playlist_url,
         "--download-dir",
         download_dir,
         "--last-videos",
@@ -259,6 +364,12 @@ def _launch_background_download(
         "--archive-path",
         archive_path or DEFAULT_CONFIG["archive_path"],
     ]
+
+    if playlist_url:
+        cmd.extend(["--playlist-url", playlist_url])
+    else:
+        cmd.extend(["--playlist-txt-input", playlist_txt_input or ""])
+
     if cookies_path:
         cmd.extend(["--cookies-path", cookies_path])
 
@@ -359,7 +470,9 @@ def main() -> None:
 1) Lancer le téléchargement
 2) Configuration
 3) Annuler un téléchargement en arrière-plan
-4) Quitter
+4) Exporter en playlist.txt (1 URL par ligne)
+5) Télécharger depuis playlist.txt
+6) Quitter
 Choix: """
 
     try:
@@ -372,6 +485,10 @@ Choix: """
             elif choice == "3":
                 cancel_background_download(logger)
             elif choice == "4":
+                export_playlist_menu(config, logger)
+            elif choice == "5":
+                start_download_from_playlist_txt_menu(config, logger)
+            elif choice == "6":
                 print("Au revoir !")
                 break
             else:

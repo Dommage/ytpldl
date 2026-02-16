@@ -64,12 +64,38 @@ python -m yt_playlist_downloader.worker \
   --cookies-path ./cookies.txt
 ```
 
+- Pour exporter la playlist en `playlist.txt` (1 URL par ligne) :
+```bash
+source .venv/bin/activate
+python -m yt_playlist_downloader.worker \
+  --playlist-url "https://www.youtube.com/playlist?list=XXXX" \
+  --download-dir "/srv/videos" \
+  --last-videos 0 \
+  --cookies-path ./cookies.txt \
+  --export-playlist-txt \
+  --playlist-txt-path "/srv/videos/playlist.txt"
+```
+
+- Pour télécharger les vidéos à partir d'un `playlist.txt` (1 URL par ligne) :
+```bash
+source .venv/bin/activate
+python -m yt_playlist_downloader.worker \
+  --playlist-txt-input "/srv/videos/playlist.txt" \
+  --download-dir "/srv/videos" \
+  --last-videos 0 \
+  --max-quality-height 1080 \
+  --cookies-path ./cookies.txt
+```
+
 ## Menu CLI
 ```
 === Téléchargeur de playlist YouTube ===
 1) Lancer le téléchargement
 2) Configuration
-3) Quitter
+3) Annuler un téléchargement en arrière-plan
+4) Exporter en playlist.txt (1 URL par ligne)
+5) Télécharger depuis playlist.txt
+6) Quitter
 ```
 
 ### Option 1 : Lancer le téléchargement
@@ -89,6 +115,15 @@ Les vidéos déjà référencées dans `logs/download_archive.txt` sont automati
 - Définit la **qualité maximale** désirée (hauteur en pixels)
 
 Les valeurs sont sauvegardées dans `config/config.json`.
+
+### Option 3 : Annuler un téléchargement en arrière-plan
+- Permet d'arrêter un téléchargement lancé en arrière-plan.
+
+### Option 4 : Exporter en playlist.txt
+- Génère un fichier `playlist.txt` avec **1 URL par ligne**.
+
+### Option 5 : Télécharger depuis playlist.txt
+- Télécharge les vidéos listées dans un fichier `playlist.txt` (1 URL par ligne).
 
 ## Résilience et reprise
 - `yt-dlp` est configuré avec des reprises automatiques (`continuedl`), plusieurs tentatives (`retries`, `fragment_retries`) et un délai d'attente (`socket_timeout`).
