@@ -1,1 +1,5 @@
 yt-dlp[default]>=2024.4.9
+
+# System requirements (install via apt/brew, not pip):
+# - nodejs
+# - deno
