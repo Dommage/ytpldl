@@ -33,7 +33,11 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# (Optionnel mais recommandé) Installer un runtime JavaScript (ex. Node.js) pour résoudre les challenges YouTube (EJS) si yt-dlp l'exige.
+# (Optionnel mais recommande) Installer un runtime JavaScript pour les challenges YouTube (EJS).
+# Recommande: Deno + Node.js.
+# Verifier:
+#   node --version
+#   deno --version
 ```
 
 ## Lancement de l'application
@@ -91,7 +95,8 @@ Les valeurs sont sauvegardées dans `config/config.json`.
 - Les fragments déjà téléchargés ne sont pas perdus.
 - Les erreurs sont journalisées avec date/heure dans `logs/app.log`.
 - Les vidéos déjà téléchargées sont suivies dans `logs/download_archive.txt` pour éviter les doublons.
-- Les erreurs de challenge YouTube (EJS) sont signalées clairement ; installez un runtime JavaScript (ex. Node.js) et le solveur EJS pour les résoudre.
+- Les erreurs de challenge YouTube (EJS) sont signalees clairement ; installez Node.js et Deno, puis mettez a jour yt-dlp :
+  `pip install -U 'yt-dlp[default]'`
 
 ## Exemple d'exécution
 ```
