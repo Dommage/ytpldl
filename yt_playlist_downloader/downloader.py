@@ -137,12 +137,14 @@ class PlaylistDownloader:
             os.makedirs(archive_dir, exist_ok=True)
 
         if max_quality_height and max_quality_height > 0:
-            format_selector = (
-                f"bestvideo[height<={max_quality_height}]+bestaudio/best[height<="
-                f"{max_quality_height}]"
+            fallback = (
+                f"bestvideo[ext=mp4][height<={max_quality_height}]+bestaudio[ext=m4a]/"
+                f"best[ext=mp4][height<={max_quality_height}]/best[ext=mp4]"
             )
         else:
-            format_selector = "bestvideo+bestaudio/best"
+            fallback = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best[ext=mp4]"
+
+        format_selector = f"137+140/{fallback}"
 
         ydl_opts = {
             "outtmpl": os.path.join(download_dir, "%(title)s.%(ext)s"),
@@ -157,6 +159,7 @@ class PlaylistDownloader:
             "progress_hooks": [self._progress_hook],
             "trim_file_name": 200,
             "format": format_selector,
+            "merge_output_format": "mp4",
             "download_archive": resolved_archive,
             "nooverwrites": True,
         }
@@ -272,12 +275,14 @@ class PlaylistDownloader:
             os.makedirs(archive_dir, exist_ok=True)
 
         if max_quality_height and max_quality_height > 0:
-            format_selector = (
-                f"bestvideo[height<={max_quality_height}]+bestaudio/best[height<="
-                f"{max_quality_height}]"
+            fallback = (
+                f"bestvideo[ext=mp4][height<={max_quality_height}]+bestaudio[ext=m4a]/"
+                f"best[ext=mp4][height<={max_quality_height}]/best[ext=mp4]"
             )
         else:
-            format_selector = "bestvideo+bestaudio/best"
+            fallback = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best[ext=mp4]"
+
+        format_selector = f"137+140/{fallback}"
 
         ydl_opts = {
             "outtmpl": os.path.join(download_dir, "%(title)s.%(ext)s"),
@@ -296,6 +301,7 @@ class PlaylistDownloader:
             "progress_hooks": [self._progress_hook],
             "trim_file_name": 200,
             "format": format_selector,
+            "merge_output_format": "mp4",
             "download_archive": resolved_archive,
             "nooverwrites": True,
         }
