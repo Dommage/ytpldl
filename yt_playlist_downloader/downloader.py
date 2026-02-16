@@ -1,11 +1,13 @@
 import os
 import sys
-from typing import Optional
+from typing import Any, Optional
 
-from yt_dlp import YoutubeDL
+from yt_dlp import YoutubeDL as _YoutubeDL
 from yt_dlp.utils import DownloadError
 
 from .logger import get_logger
+
+YoutubeDL: Any = _YoutubeDL
 
 
 def _format_eta(seconds: Optional[int]) -> str:
@@ -156,16 +158,29 @@ class PlaylistDownloader:
             print("\nAll downloads attempted. Review logs for details.")
         except DownloadError as exc:
             error_message = str(exc)
-            if "n challenge solving failed" in error_message:
+
+            lowered = error_message.lower()
+            is_youtube_challenge = (
+                "challenge" in lowered
+                and (
+                    "solving failed" in lowered
+                    or "ejs" in lowered
+                    or "javascript" in lowered
+                    or "js runtime" in lowered
+                    or "external javascript" in lowered
+                )
+            )
+
+            if is_youtube_challenge:
                 self.logger.error(
                     "yt-dlp a rencontré un échec de résolution de challenge (EJS). "
-                    "Installez un runtime JavaScript pris en charge (ex: Node.js) et "
-                    "assurez-vous que les scripts EJS de yt-dlp sont disponibles. Détails: %s",
+                    "Assurez-vous que Node.js et Deno sont installes, puis mettez a jour yt-dlp "
+                    "(pip install -U 'yt-dlp[default]'). Details: %s",
                     error_message,
                 )
                 print(
-                    "Erreur de challenge YouTube. Installez un runtime JavaScript (ex: Node.js) "
-                    "et le challenge solver EJS. Consultez les logs pour plus de détails."
+                    "Erreur de challenge YouTube (EJS). Installez Node.js et Deno, puis mettez a jour yt-dlp "
+                    "(pip install -U 'yt-dlp[default]'). Consultez les logs pour plus de details."
                 )
             else:
                 self.logger.error("Erreur yt-dlp: %s", error_message)

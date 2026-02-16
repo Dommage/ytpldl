@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from typing import Optional
 
 from .downloader import PlaylistDownloader
@@ -20,6 +21,16 @@ def parse_args():
 
 def main():
     args = parse_args()
+    missing: list[str] = []
+    if shutil.which("node") is None:
+        missing.append("node")
+    if shutil.which("deno") is None:
+        missing.append("deno")
+    if missing:
+        print(
+            "[INFO] Runtime JavaScript manquant pour YouTube (EJS): "
+            f"{', '.join(missing)}."
+        )
     logger = get_logger("yt_playlist_downloader.worker")
     downloader = PlaylistDownloader(logger=logger)
     max_height: Optional[int] = args.max_quality_height or None

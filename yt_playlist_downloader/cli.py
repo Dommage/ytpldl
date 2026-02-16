@@ -1,4 +1,5 @@
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -135,6 +136,27 @@ def _prompt_cookies_path(current_default: Optional[str]) -> Optional[str]:
     return raw
 
 
+def _warn_missing_js_runtimes() -> None:
+    missing: list[str] = []
+    if shutil.which("node") is None:
+        missing.append("node")
+    if shutil.which("deno") is None:
+        missing.append("deno")
+
+    if not missing:
+        return
+
+    missing_display = ", ".join(missing)
+    print(
+        "\n[INFO] Runtime JavaScript manquant pour YouTube (EJS): "
+        f"{missing_display}."
+    )
+    print(
+        "Installez Node.js et Deno pour reduire les echecs de challenge. "
+        "Puis mettez a jour yt-dlp: pip install -U 'yt-dlp[default]'."
+    )
+
+
 def configure_menu(config: dict, logger) -> dict:
     print("\n--- Configuration ---")
     download_dir = _prompt("Default dossier de téléchargement", config["download_dir"])
@@ -159,6 +181,7 @@ def configure_menu(config: dict, logger) -> dict:
 
 def start_download_menu(config: dict, logger) -> None:
     print("\n--- Lancer le téléchargement ---")
+    _warn_missing_js_runtimes()
     playlist_url = _prompt("URL de la playlist YouTube")
     while not playlist_url:
         print("L'URL ne peut pas être vide.")
